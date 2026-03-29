@@ -1,195 +1,196 @@
 # libasm notes (for absolute beginners)
 
-This document explains the very basics you need before writing your first assembly functions.
+## constraints
 
-## your learning constraints (important)
-
-You must follow these rules:
-
-- Write **64-bit assembly** only.
-- Use **`.s` files** (no inline ASM inside C).
-- Assemble with **nasm**.
-- Use **Intel syntax** (not AT&T syntax).
-- Follow the **calling convention** correctly.
-
-Because you are on Linux x86_64, this usually means the **System V AMD64 ABI** calling convention.
+- 64-bit assembly only
+- `.s` files (no inline ASM)
+- assemble with `nasm`
+- Intel syntax (not AT&T)
+- follow the calling convention (System V AMD64 ABI on Linux x86_64)
 
 ---
 
-## 1) what is a register?
+## 1) registers
 
-A CPU has tiny, super-fast storage slots called **registers**.
+Registers are tiny, super-fast storage slots inside the CPU. Think of them as variables that live in the CPU itself.
 
-Think of a register like a variable that lives inside the CPU.
+In 64-bit mode the general-purpose registers are:
 
-In 64-bit mode, many general-purpose registers are 64 bits wide:
+`RAX`, `RBX`, `RCX`, `RDX`, `RSI`, `RDI`, `RBP`, `RSP`, `R8`–`R15`
 
-- `RAX`, `RBX`, `RCX`, `RDX`
-- `RSI`, `RDI`
-- `RBP`, `RSP`
-- `R8` to `R15`
+One physical register can be accessed at different widths:
 
-### same register, different sizes
-
-One physical register can be accessed with different sizes:
-
-- `RAX` = 64-bit
-- `EAX` = low 32-bit
-- `AX` = low 16-bit
-- `AL` = low 8-bit
-
-This matters when reading/writing data of different types.
+| Name | Width | What it accesses |
+|------|-------|-----------------|
+| `RAX` | 64-bit | full register |
+| `EAX` | 32-bit | lower half |
+| `AX` | 16-bit | lowest 16 bits |
+| `AL` | 8-bit | lowest byte |
 
 ---
 
-## 1.5) are registers "reserved"?
+## 2) system calls
 
-Short answer: **not permanently**.
+A **syscall** is how your program asks the Linux kernel to do something (write to the terminal, exit, open a file, etc.).
 
-You can use general-purpose registers for your own temporary values.
-But at important boundaries, some registers must carry specific meanings.
+Each syscall has a number. You put that number in `RAX`, fill in the arguments, then call `syscall`.
 
-### context 1: inside your own function
+### syscall register roles
 
-Most registers are free to use for calculations.
+| Register | Role |
+|----------|------|
+| `RAX` | syscall number — tells the kernel *which* operation |
+| `RDI` | argument 1 |
+| `RSI` | argument 2 |
+| `RDX` | argument 3 |
+| `R10`, `R8`, `R9` | arguments 4–6 (rarely needed) |
 
-### context 2: function call boundary (C <-> ASM)
+After `syscall` returns, the result is in `RAX`.
 
-By calling convention (Linux x86_64):
+### common syscall numbers (Linux x86_64)
 
+| Number | Name | What it does |
+|--------|------|--------------|
+| `0` | `sys_read` | read bytes from a file descriptor |
+| `1` | `sys_write` | write bytes to a file descriptor |
+| `2` | `sys_open` | open a file, returns a fd |
+| `3` | `sys_close` | close a file descriptor |
+| `57` | `sys_fork` | fork the current process |
+| `60` | `sys_exit` | terminate the process |
 
-- `RDI`, `RSI`, `RDX`, `RCX`, `R8`, `R9` = first arguments
-- `RAX` = return value
-- `RBX`, `RBP`, `R12`-`R15` must be preserved by your function
+Full table: [https://filippo.io/linux-syscall-table/](https://filippo.io/linux-syscall-table/)
 
-### context 3: syscall boundary (Linux kernel)
+### standard file descriptors
 
+| fd | meaning |
+|----|---------|
+| `0` | stdin |
+| `1` | stdout |
+| `2` | stderr |
 
-For `syscall` on Linux x86_64:
+### example: hello world + exit
 
-- `RAX` = syscall number
-- `RDI`, `RSI`, `RDX`, `R10`, `R8`, `R9` = syscall arguments
-- return value comes back in `RAX`
+```nasm
+bits 64
+global _start
 
-So: registers are "free" while you work, but must match expected roles
-when crossing function/syscall boundaries.
+section .data
+    msg db "Hello, World!", 10
+    msg_len equ $ - msg       ; equ $ - label = auto-calculate length
 
----
+section .text
+_start:
+    mov rax, 1                ; sys_write
+    mov rdi, 1                ; fd 1 = stdout
+    lea rsi, [msg]            ; pointer to string
+    mov rdx, msg_len          ; byte count
+    syscall
 
-## 2) first instructions you should know
+    cmp rax, 0                ; negative return = error
+    jl .error
 
-### `mov`
+    mov rax, 60               ; sys_exit
+    mov rdi, 0                ; exit code 0 = success
+    syscall
 
-Copies data from source to destination.
-
-- `mov rdi, 8` → put immediate value `8` in `RDI`
-- `mov rsi, rdi` → copy `RDI` into `RSI`
-
-### `add` / `sub`
-
-- `add rax, 1` → `RAX = RAX + 1`
-- `sub rax, 2` → `RAX = RAX - 2`
-
-### `xor`
-
-- `xor rax, rax` → set `RAX` to `0` (common fast way)
-
-### `ret`
-
-Return from function to the caller.
-
----
-
-## 3) memory vs register
-
-Registers are inside CPU. Memory (RAM) is outside CPU.
-
-In Intel syntax, memory access uses brackets:
-
-- `mov rax, [rdi]` → load 8 bytes from address in `RDI`
-- `mov [rdi], rax` → store 8 bytes to address in `RDI`
-
-If `RDI` points to invalid memory, program crashes.
-
----
-
-## 4) calling convention (core concept)
-
-When C calls your assembly function, both sides must agree on rules.
-Those rules are the **calling convention**.
-
-For Linux x86_64 (System V):
-
-### argument registers
-
-The first integer/pointer arguments arrive in:
-
-1. `RDI`
-2. `RSI`
-3. `RDX`
-4. `RCX`
-5. `R8`
-6. `R9`
-
-### return value
-
-Put return value in `RAX`.
-
-### callee-saved registers
-
-If your function changes these, restore them before `ret`:
-
-- `RBX`, `RBP`, `R12`, `R13`, `R14`, `R15`
-
-Other general registers are caller-saved.
-
-### stack alignment
-
-Before calling another function, stack should be 16-byte aligned.
-
-For beginner exercises, if your function does not call other functions,
-this is usually simpler.
+.error:
+    mov rax, 60
+    mov rdi, 1                ; exit code 1 = failure
+    syscall
+```
 
 ---
 
-## 5) minimal function example
+## 3) memory access
 
-Example: function that returns constant 42.
+Registers live in the CPU. Memory (RAM) is outside it.
 
-```asm
+In Intel syntax, brackets mean "read from this address":
+
+```nasm
+mov rax, [rdi]    ; load 8 bytes from the address stored in RDI
+mov [rdi], rax    ; store 8 bytes to the address stored in RDI
+```
+
+If `RDI` points to invalid memory, the program crashes (segfault).
+
+---
+
+## 4) calling convention (C ↔ ASM)
+
+When C calls your assembly function, both sides must agree on the same rules — this agreement is called the **calling convention**.
+
+On Linux x86_64 (System V AMD64 ABI):
+
+- Arguments arrive in: `RDI`, `RSI`, `RDX`, `RCX`, `R8`, `R9`
+- Return value goes in: `RAX`
+- If you modify `RBX`, `RBP`, or `R12`–`R15`, restore them before `ret`
+
+### minimal example
+
+```nasm
 global my_answer
 
 section .text
 my_answer:
-	mov rax, 42
-	ret
+    mov rax, 42
+    ret
 ```
 
-If called from C as `long my_answer(void);`, it returns `42` in `RAX`.
+Callable from C as `long my_answer(void);` — returns `42`.
 
 ---
 
-## 6) nasm + linker flow (basic)
+## 5) error handling
 
-Typical steps:
+### in `_start` (standalone program)
 
-1. Assemble `.s` source with `nasm` into an object file.
-2. Link object file with C files (or other objects) using your toolchain.
+There is no caller, so `errno` doesn't matter. Just exit with a non-zero code to signal failure (see hello world example above).
 
-If your project Makefile is already provided, follow it exactly.
+### in library functions (C ↔ ASM)
+
+When a syscall fails, the kernel returns a negative value in `RAX` (e.g. `-9` for `EBADF`). Your function must:
+
+1. detect the error
+2. negate `RAX` to get the positive errno code
+3. store it in `errno` via `__errno_location`
+4. return `-1` to the caller
+
+`errno` is thread-local — you can't write to it directly. Call `__errno_location` to get a pointer to it.
+
+```nasm
+extern __errno_location
+
+ft_write:
+    mov rax, 1            ; sys_write
+    syscall
+
+    cmp rax, 0            ; negative = error
+    jl .error
+    ret                   ; success: rax = bytes written
+
+.error:
+    neg rax               ; positive errno code
+    push rax              ; save it — rax will be clobbered by the call
+    call __errno_location ; rax = pointer to errno
+    pop rcx               ; retrieve saved errno code
+    mov [rax], rcx        ; *errno = error code
+    mov rax, -1           ; return -1 to caller
+    ret
+```
+
+**why `push`/`pop` and not a register?**
+`RDI`, `RSI`, etc. are caller-saved — `__errno_location` is free to clobber them. The stack is safe because any callee must restore `RSP` before returning.
 
 ---
 
-## 7) beginner checklist
+## 6) checklist before testing a function
 
-Before testing a function, verify:
+- [ ] symbol marked `global`
+- [ ] name matches the C prototype
+- [ ] arguments read from the right registers (`RDI`, `RSI`, ...)
+- [ ] return value written to `RAX`
+- [ ] any callee-saved registers restored before `ret`
+- [ ] file uses Intel syntax and is assembled with `nasm`
 
-- [ ] Function symbol is marked `global`.
-- [ ] Function name matches expected C prototype.
-- [ ] Arguments read from the right registers (`RDI`, `RSI`, ...).
-- [ ] Return value written to `RAX`.
-- [ ] Saved registers restored if modified.
-- [ ] Syntax is Intel and file is assembled by `nasm`.
-
-If something “almost works”, 80% of the time it is naming, calling convention,
-or register clobbering.
+If something "almost works", 80% of the time it's a naming mismatch, wrong register, or clobbered callee-saved register.
