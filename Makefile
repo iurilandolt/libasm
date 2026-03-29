@@ -5,12 +5,14 @@ SRCS_DIR = srcs/
 OBJS_DIR = objs/
 SRCS = $(wildcard srcs/*.s)
 OBJS = $(addprefix $(OBJS_DIR),$(SRCS:$(SRCS_DIR)%.s=%.o))
-# HEADERS = -I includes/
 HDRS = $(wildcard includes/*.h)
 
 
+RM = rm -f
+CC = cc
 CFLAGS = -Wall -Wextra -Werror -g
 COMPILER = nasm -f elf64
+ARCH = ar rcs
 
 all: $(LIB_NAME)
 
@@ -35,6 +37,10 @@ fclean: clean
 	@echo "$(RED)$(NAME)$(NC) cleaned!"
 	@$(RM) 
 
+run: all
+	@$(CC) $(CFLAGS) main.c $(LIB_NAME) -o $(NAME) -I includes/
+	@./$(NAME)
+
 re: fclean all
 
-.PHONY: all fclean clean re 
+.PHONY: all fclean clean re run
