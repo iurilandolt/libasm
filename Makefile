@@ -10,7 +10,7 @@ HDRS = $(wildcard includes/*.h)
 
 RM = rm -f
 CC = cc
-CFLAGS = -Wall -Wextra -Werror -g
+CFLAGS = -Wall -Wextra -Werror -g -no-pie
 COMPILER = nasm -f elf64
 ARCH = ar rcs
 

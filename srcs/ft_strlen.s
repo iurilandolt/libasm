@@ -14,6 +14,8 @@ ft_strlen:
 .done:
     ret                       ; return counter in rax
 
+section .note.GNU-stack progbits
+
 ; PROTOTYPE
 ;   size_t strlen(const char *s);
 ;

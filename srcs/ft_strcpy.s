@@ -1,4 +1,3 @@
-
 bits 64
 global ft_strcpy
 
@@ -15,6 +14,8 @@ ft_strcpy:
     jne .loop             ; if not, keep going
 
     ret                   ; rax still holds original dest
+
+section .note.GNU-stack progbits
 
 ; PROTOTYPE
 ;   char *strcpy(char *restrict dst, const char *restrict src);

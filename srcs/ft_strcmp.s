@@ -19,6 +19,8 @@ ft_strcmp:
     sub eax, ecx          ; return s1[i] - s2[i]
     ret
 
+section .note.GNU-stack progbits
+
 ; PROTOTYPE
 ;   int strcmp(const char *s1, const char *s2);
 ;
@@ -48,4 +50,3 @@ ft_strcmp:
 ;       movzx eax, al         ; must zero-extend before subtracting
 ;       movzx ecx, cl
 ;       [ ... ]
-;

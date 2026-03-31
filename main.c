@@ -36,5 +36,16 @@ int main(void)
 	printf("ft_strcmp(\"\", \"\")       = %d\n", ft_strcmp("", ""));
 	printf("  strcmp(\"\", \"\")       = %d\n",   strcmp("", ""));
 
+	printf("ft_write stdout: ");
+	ft_write(1, "Hello from ft_write!\n", 21);
+	printf("  write stdout: ");
+	write(1, "Hello from write!\n", 18);
+
+	ssize_t r1 = ft_write(-1, "x", 1);
+	printf("ft_write bad fd: ret=%zd errno=%d\n", r1, errno);
+
+	ssize_t r2 = write(-1, "x", 1);
+	printf("  write bad fd: ret=%zd errno=%d\n", r2, errno);
+
 	return (0);
 }
