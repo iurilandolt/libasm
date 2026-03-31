@@ -49,6 +49,8 @@ The size of the access must be explicit when ambiguous: `byte`, `word`, `dword`,
 ### comparison and jumps
 
 `cmp` subtracts src from dst and sets CPU flags — it does not store the result.
+`test` ANDs src and dst and sets flags — it does not store the result either.
+The most common use is `test reg, reg` to check if a register is zero (NULL check).
 Jump instructions read those flags to decide whether to jump.
 
 | Mnemonic | Jumps when... |
@@ -282,7 +284,90 @@ ft_write:
 
 ---
 
-## 6) checklist before testing a function
+## 6) preserving values across multiple calls
+
+When your function needs to call other functions, caller-saved registers (`RAX`,
+`RCX`, `RDX`, `RSI`, `RDI`, `R8`–`R11`) will be clobbered by each `call`. If
+you need a value to survive across two or more calls, you have two options:
+
+**option 1 — use a callee-saved register (`RBX`, `R12`–`R15`)**
+
+Push it at the start, use it freely, pop it before `ret`. Every call you make
+will leave it untouched.
+
+```nasm
+ft_strdup:
+    push rbx          ; save rbx — we're about to use it as scratch
+    mov rbx, rdi      ; keep src here across ft_strlen + malloc calls
+
+    call ft_strlen    ; rax = length — rbx still holds src
+    inc rax
+    mov rdi, rax
+    call malloc       ; rax = new buffer — rbx still holds src
+
+    mov rdi, rax
+    mov rsi, rbx      ; restore src as second argument
+    call ft_strcpy
+
+    pop rbx           ; restore rbx for our caller
+    ret
+```
+
+**option 2 — push the value onto the stack**
+
+```nasm
+    push rdi          ; save src on stack
+    call ft_strlen
+    inc rax
+    mov rdi, rax
+    call malloc
+    ; ...
+    pop rsi           ; retrieve src directly into the register we need
+    call ft_strcpy
+```
+
+The stack approach avoids touching a callee-saved register at all, but you must
+`pop` on every exit path — including error paths — or the stack will be
+unbalanced and `ret` will jump to garbage.
+
+---
+
+## 7) calling C library functions
+
+Not everything needs a syscall. Standard C functions like `malloc`, `free`,
+`printf` can be called directly — they follow the same System V AMD64 calling
+convention as your own functions.
+
+### extern + wrt ..plt
+
+To call a C library function from a `.s` file:
+
+1. Declare it with `extern` so the linker knows to look for it.
+2. Use `wrt ..plt` on the call so the dynamic linker can resolve it at runtime.
+
+```nasm
+extern malloc
+
+    call malloc wrt ..plt   ; rdi = size (already set), rax = returned pointer
+```
+
+`wrt ..plt` means "via the Procedure Linkage Table" — the mechanism the dynamic
+linker uses to patch in the real address of shared library functions the first
+time they're called. You need it whenever calling into a shared library (libc).
+You do **not** need it for functions defined in your own `.s` or `.o` files.
+
+### syscall vs C library call
+
+| | syscall | C library call |
+|---|---|---|
+| mechanism | `mov rax, N; syscall` | `call fn wrt ..plt` |
+| declaration | nothing | `extern fn` |
+| error in RAX | negative errno code | function-specific (check man page) |
+| errno | you set it manually | the library sets it for you |
+
+---
+
+## 8) checklist before testing a function
 
 - [ ] symbol marked `global`
 - [ ] name matches the C prototype

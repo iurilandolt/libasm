@@ -16,7 +16,17 @@ ft_strcmp:
     jmp .loop
 
 .done:
-    sub eax, ecx          ; return s1[i] - s2[i]
+    sub eax, ecx          ; s1[i] - s2[i]
+    jl  .neg              ; negative → return -1
+    jg  .pos              ; positive → return  1
+    ret                   ; zero    → return  0 (eax already 0)
+
+.neg:
+    mov eax, -1
+    ret
+	
+.pos:
+    mov eax, 1
     ret
 
 section .note.GNU-stack progbits
@@ -30,8 +40,8 @@ section .note.GNU-stack progbits
 ;   Returns 0 if equal, negative if s1 < s2, positive if s1 > s2.
 ;
 ; RETURN VALUE
-;   Returns an integer less than, equal to, or greater than zero if s1 is
-;   found to be less than, to match, or be greater than s2.
+;   Returns -1, 0, or 1 if s1 is less than, equal to, or greater than s2.
+;   POSIX only guarantees sign — we normalize to match common libc behaviour.
 ;
 ; NOTE
 ;   An alternative uses register aliasing — accessing sub-parts of a register

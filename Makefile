@@ -10,7 +10,7 @@ HDRS = $(wildcard includes/*.h)
 
 RM = rm -f
 CC = cc
-CFLAGS = -Wall -Wextra -Werror -g -no-pie
+CFLAGS = -Wall -Wextra -Werror -g
 COMPILER = nasm -f elf64
 ARCH = ar rcs
 
@@ -21,20 +21,20 @@ $(OBJS_DIR)%.o: $(SRCS_DIR)%.s $(HDRS)
 	@$(COMPILER) $< -o $@
 
 $(LIB_NAME): $(OBJS)
-	@echo "$(GREEN)$(NAME)$(NC) compiling..."
+	@echo "$(NAME)$(NC) compiling..."
 	@$(ARCH) $(LIB_NAME) $(OBJS)
-	@echo "$(GREEN)$(NAME)$(NC) ready!"
+	@echo "$(NAME)$(NC) ready!"
 
 clean:
 	@$(RM) -r $(OBJS_DIR)
 	@$(RM) -r $(OBJS_DIR_BONUS)
-	@echo "$(RED)$(NAME)$(NC) OBJS cleaned!"
+	@echo "$(NAME)$(NC) OBJS cleaned!"
 
 fclean: clean
 	@$(RM) $(NAME)
 	@$(RM) $(LIB_NAME)
 	@$(RM) $(BONUS_NAME)
-	@echo "$(RED)$(NAME)$(NC) cleaned!"
+	@echo "$(NAME)$(NC) cleaned!"
 	@$(RM) 
 
 run: all

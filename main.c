@@ -1,51 +1,84 @@
 #include "libasm.h"
 
-int main(void)
+int	main(void)
 {
-	printf("ft_strlen(\"Hello\")   = %zu\n", ft_strlen("Hello"));
-	printf("  strlen(\"Hello\")   = %zu\n",   strlen("Hello"));
+	size_t		ft, ref;
+	char		dst_ft[64];
+	char		dst_ref[64];
+	int			ft_cmp, ref_cmp;
+	ssize_t		ft_wr, ref_wr;
+	ssize_t		ft_rd, ref_rd;
+	int			ft_err, ref_err;
+	char		buf_ft[16];
+	char		buf_ref[16];
+	int			fd;
+	char		*ft_dup, *ref_dup;
 
-	printf("ft_strlen(\"\")        = %zu\n", ft_strlen(""));
-	printf("  strlen(\"\")        = %zu\n",   strlen(""));
+	/* ft_strlen */
+	printf("\n=== ft_strlen ===\n");
+	ft = ft_strlen("");        ref = strlen("");
+	printf("  \"\"        ft: %zu  |  ref: %zu\n", ft, ref);
+	ft = ft_strlen("Hello");   ref = strlen("Hello");
+	printf("  \"Hello\"   ft: %zu  |  ref: %zu\n", ft, ref);
+	ft = ft_strlen("foo bar"); ref = strlen("foo bar");
+	printf("  \"foo bar\" ft: %zu  |  ref: %zu\n", ft, ref);
 
-	printf("ft_strlen(\"abc\")     = %zu\n", ft_strlen("abc"));
-	printf("  strlen(\"abc\")     = %zu\n",   strlen("abc"));
+	/* ft_strcpy */
+	printf("\n=== ft_strcpy ===\n");
+	ft_strcpy(dst_ft, "Hello");  strcpy(dst_ref, "Hello");
+	printf("  \"Hello\"   ft: %s  |  ref: %s\n", dst_ft, dst_ref);
+	ft_strcpy(dst_ft, "");       strcpy(dst_ref, "");
+	printf("  \"\"        ft: \"%s\"  |  ref: \"%s\"\n", dst_ft, dst_ref);
 
-	char dst[50];
-	char ref[50];
+	/* ft_strcmp */
+	printf("\n=== ft_strcmp ===\n");
+	ft_cmp = ft_strcmp("abc", "abc");   ref_cmp = strcmp("abc", "abc");
+	printf("  \"abc\",\"abc\"  ft: %d   |  ref: %d\n", ft_cmp, ref_cmp);
+	ft_cmp = ft_strcmp("abc", "abd");   ref_cmp = strcmp("abc", "abd");
+	printf("  \"abc\",\"abd\"  ft: %d  |  ref: %d\n", ft_cmp, ref_cmp);
+	ft_cmp = ft_strcmp("abd", "abc");   ref_cmp = strcmp("abd", "abc");
+	printf("  \"abd\",\"abc\"  ft: %d   |  ref: %d\n", ft_cmp, ref_cmp);
+	ft_cmp = ft_strcmp("abc", "abcd");  ref_cmp = strcmp("abc", "abcd");
+	printf("  \"abc\",\"abcd\" ft: %d  |  ref: %d\n", ft_cmp, ref_cmp);
 
-	ft_strcpy(dst, "Hello, World!");
-	strcpy(ref, "Hello, World!");
-	printf("ft_strcpy(\"Hello, World!\") = %s\n", dst);
-	printf("  strcpy(\"Hello, World!\") = %s\n",   ref);
+	/* ft_write */
+	printf("\n=== ft_write ===\n");
+	ft_wr  = ft_write(1, "ft:  hello from ft_write\n", 25);
+	ref_wr = write(1,    "ref: hello from    write\n", 25);
+	printf("  bytes  ft: %zd  |  ref: %zd\n", ft_wr, ref_wr);
+	errno = 0; ft_write(-1, "x", 1); ft_err  = errno;
+	errno = 0; write(-1, "x", 1);    ref_err = errno;
+	printf("  bad fd ft: errno=%d  |  ref: errno=%d\n", ft_err, ref_err);
 
-	ft_strcpy(dst, "");
-	strcpy(ref, "");
-	printf("ft_strcpy(\"\")             = \"%s\"\n", dst);
-	printf("  strcpy(\"\")             = \"%s\"\n",   ref);
+	/* ft_read */
+	printf("\n=== ft_read ===\n");
+	fd = open("/tmp/libasm_test", O_WRONLY | O_CREAT | O_TRUNC, 0600);
+	write(fd, "hello", 5);
+	close(fd);
+	fd = open("/tmp/libasm_test", O_RDONLY);
+	bzero(buf_ft, sizeof(buf_ft));
+	ft_rd = ft_read(fd, buf_ft, 5);
+	close(fd);
+	fd = open("/tmp/libasm_test", O_RDONLY);
+	bzero(buf_ref, sizeof(buf_ref));
+	ref_rd = read(fd, buf_ref, 5);
+	close(fd);
+	printf("  \"hello\" ft: \"%s\" (%zd)  |  ref: \"%s\" (%zd)\n", buf_ft, ft_rd, buf_ref, ref_rd);
+	errno = 0; ft_read(-1, buf_ft, 1);  ft_err  = errno;
+	errno = 0; read(-1, buf_ref, 1);    ref_err = errno;
+	printf("  bad fd  ft: errno=%d  |  ref: errno=%d\n", ft_err, ref_err);
 
-	printf("ft_strcmp(\"abc\", \"abc\") = %d\n", ft_strcmp("abc", "abc"));
-	printf("  strcmp(\"abc\", \"abc\") = %d\n",   strcmp("abc", "abc"));
+	/* ft_strdup */
+	printf("\n=== ft_strdup ===\n");
+	ft_dup = ft_strdup("Hello");  ref_dup = strdup("Hello");
+	printf("  \"Hello\"  ft: %s  |  ref: %s\n", ft_dup, ref_dup);
+	free(ft_dup); free(ref_dup);
+	ft_dup = ft_strdup("");       ref_dup = strdup("");
+	printf("  \"\"       ft: \"%s\"  |  ref: \"%s\"\n", ft_dup, ref_dup);
+	free(ft_dup); free(ref_dup);
+	ft_dup = ft_strdup(NULL);     ref_dup = NULL;
+	printf("  NULL     ft: %p  |  ref: %p\n", (void *)ft_dup, (void *)ref_dup);
 
-	printf("ft_strcmp(\"abc\", \"abd\") = %d\n", ft_strcmp("abc", "abd"));
-	printf("  strcmp(\"abc\", \"abd\") = %d\n",   strcmp("abc", "abd"));
-
-	printf("ft_strcmp(\"abd\", \"abc\") = %d\n", ft_strcmp("abd", "abc"));
-	printf("  strcmp(\"abd\", \"abc\") = %d\n",   strcmp("abd", "abc"));
-
-	printf("ft_strcmp(\"\", \"\")       = %d\n", ft_strcmp("", ""));
-	printf("  strcmp(\"\", \"\")       = %d\n",   strcmp("", ""));
-
-	printf("ft_write stdout: ");
-	ft_write(1, "Hello from ft_write!\n", 21);
-	printf("  write stdout: ");
-	write(1, "Hello from write!\n", 18);
-
-	ssize_t r1 = ft_write(-1, "x", 1);
-	printf("ft_write bad fd: ret=%zd errno=%d\n", r1, errno);
-
-	ssize_t r2 = write(-1, "x", 1);
-	printf("  write bad fd: ret=%zd errno=%d\n", r2, errno);
-
+	printf("\n");
 	return (0);
 }

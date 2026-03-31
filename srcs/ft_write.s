@@ -14,7 +14,7 @@ ft_write:
 .error:
     neg rax               ; flip to positive errno code
     push rax              ; save it — call below will clobber rax
-    call __errno_location ; rax = pointer to errno
+    call __errno_location wrt ..plt ; rax = pointer to errno
     pop rcx               ; retrieve saved errno code
     mov [rax], rcx        ; *errno = error code
     mov rax, -1           ; return -1 to caller
