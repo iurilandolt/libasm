@@ -13,10 +13,10 @@ ft_write:
 
 .error:
     neg rax               ; flip to positive errno code
-    push rax              ; save it — call below will clobber rax
+    push rax              ; save it on stack — call below will clobber rax
     call __errno_location wrt ..plt ; rax = pointer to errno
     pop rcx               ; retrieve saved errno code
-    mov [rax], rcx        ; *errno = error code
+    mov [rax], rcx        ; write error code in at *errno
     mov rax, -1           ; return -1 to caller
     ret
 

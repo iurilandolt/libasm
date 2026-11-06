@@ -80,11 +80,11 @@ variables that live in the CPU itself.
 | Register | Caller/Callee-saved | Common use |
 |----------|-------------------|------------|
 | `RAX` | caller | return value, syscall number, scratch |
-| `RBX` | **callee** | general purpose (save/restore if used) |
-| `RCX` | caller | scratch, 4th function argument |
-| `RDX` | caller | 3rd argument, scratch |
-| `RSI` | caller | 2nd argument |
 | `RDI` | caller | 1st argument |
+| `RSI` | caller | 2nd argument |
+| `RDX` | caller | 3rd argument, scratch |
+| `RCX` | caller | scratch, 4th function argument |
+| `RBX` | **callee** | general purpose (save/restore if used) |
 | `RBP` | **callee** | frame pointer (avoid for now) |
 | `RSP` | **callee** | stack pointer — managed by push/pop/call/ret |
 | `R8`–`R9` | caller | 5th and 6th arguments |

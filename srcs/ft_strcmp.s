@@ -21,6 +21,9 @@ ft_strcmp:
     jg  .pos              ; positive → return  1
     ret                   ; zero    → return  0 (eax already 0)
 
+
+
+
 .neg:
     mov eax, -1
     ret
@@ -60,3 +63,9 @@ section .note.GNU-stack progbits
 ;       movzx eax, al         ; must zero-extend before subtracting
 ;       movzx ecx, cl
 ;       [ ... ]
+;
+;   Dropping the normalization would replace .done/.neg/.pos with just:
+;
+;   .done:
+;       sub eax, ecx          ; raw difference — same sign, POSIX-compliant
+;       ret
